@@ -64,6 +64,56 @@ Quick check:
 ascctl --help | python3 -c 'import sys,json; print(json.load(sys.stdin)["ok"])'
 ```
 
+## Agent Skill (Recommended)
+
+This repo includes an agent skill at `skills/ascctl` that acts as a compact playbook for operating `ascctl` safely and efficiently:
+
+- stable JSON I/O contract (parse stdout only)
+- universal OpenAPI workflow (`ops list` → `op show` → `op template` → `op run`)
+- token-efficient patterns (`ids`, `--select`, `--paginate --limit`, `--record/--replay`)
+
+Install the skill into your local skills directory:
+
+```bash
+SKILLS_DIR="${CODEX_HOME:-$HOME/.codex}/skills"
+```
+
+Option A (copy):
+
+```bash
+SKILLS_DIR="${CODEX_HOME:-$HOME/.codex}/skills"
+mkdir -p "$SKILLS_DIR"
+rm -rf "$SKILLS_DIR/ascctl"
+cp -R skills/ascctl "$SKILLS_DIR/ascctl"
+```
+
+Option B (symlink, best for updating from git):
+
+```bash
+SKILLS_DIR="${CODEX_HOME:-$HOME/.codex}/skills"
+mkdir -p "$SKILLS_DIR"
+rm -rf "$SKILLS_DIR/ascctl"
+ln -s "$(pwd)/skills/ascctl" "$SKILLS_DIR/ascctl"
+```
+
+Option C (no clone, install via raw files):
+
+```bash
+SKILL_DIR="${CODEX_HOME:-$HOME/.codex}/skills/ascctl"
+mkdir -p "$SKILL_DIR/agents"
+curl -fsSL https://raw.githubusercontent.com/Xopoko/AppStoreConnectCLI/main/skills/ascctl/SKILL.md -o "$SKILL_DIR/SKILL.md"
+curl -fsSL https://raw.githubusercontent.com/Xopoko/AppStoreConnectCLI/main/skills/ascctl/agents/openai.yaml -o "$SKILL_DIR/agents/openai.yaml"
+```
+
+Verify:
+
+```bash
+command -v ascctl
+ascctl --help | python3 -c 'import sys,json; print(json.load(sys.stdin)["ok"])'
+mkdir -p ~/.cache/ascctl
+ascctl openapi spec update --out ~/.cache/ascctl/openapi.oas.json --force
+```
+
 ## Quick Start
 
 1. Create config (optional, env vars also work):

@@ -1,0 +1,4 @@
+interface:
+  display_name: "ascctl"
+  short_description: "Agent-first ASC CLI playbook"
+  default_prompt: "Use $ascctl to operate the ascctl CLI (OpenAPI ops/op run/template, ids, select/paginate, record/replay) safely and efficiently."
