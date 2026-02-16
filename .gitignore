@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+.DS_Store
+xcuserdata/
+DerivedData/
+.vscode/
+AGENTS.md
+*.p8
+signatures.json
+# Apple OpenAPI spec is downloaded via `ascctl openapi spec update` and is not committed.
+openapi.oas.json
