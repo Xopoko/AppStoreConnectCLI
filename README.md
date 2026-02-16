@@ -33,6 +33,37 @@ Exit codes:
 - `5` API non-2xx (HTTP)
 - `6` internal/unexpected
 
+## Installation
+
+### Homebrew (macOS + Linux)
+
+```bash
+brew tap Xopoko/tap
+brew install ascctl
+```
+
+### Script (macOS + Linux)
+
+Install the latest release:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Xopoko/AppStoreConnectCLI/main/install.sh | bash
+```
+
+Install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Xopoko/AppStoreConnectCLI/main/install.sh | bash -s -- --version v0.1.1
+```
+
+If your chosen `--bin-dir` isn't on PATH, re-run with `--update-path` (adds it to `~/.zshrc` or `~/.bashrc`).
+
+Quick check:
+
+```bash
+ascctl --help | python3 -c 'import sys,json; print(json.load(sys.stdin)["ok"])'
+```
+
 ## Quick Start
 
 1. Create config (optional, env vars also work):

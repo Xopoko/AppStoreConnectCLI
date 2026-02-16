@@ -13,32 +13,56 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-22.04, macos-13, macos-14]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: swift-actions/setup-swift@v2
         with:
           swift-version: "6.0"
-      - run: swift build -c release
+      - name: Build (release)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${RUNNER_OS}" == "Linux" ]]; then
+            swift build -c release --static-swift-stdlib
+          else
+            swift build -c release
+          fi
+      - name: Smoke Test
+        shell: bash
+        run: |
+          set -euo pipefail
+          .build/release/ascctl --help | python3 -c 'import sys, json; data = json.load(sys.stdin); assert data.get("ok") is True'
       - name: Package
         shell: bash
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME}"
-          os="${{ matrix.os }}"
+          case "${RUNNER_OS}" in
+            macOS) os="macos" ;;
+            Linux) os="linux" ;;
+            *) echo "Unsupported runner OS: ${RUNNER_OS}" >&2; exit 1 ;;
+          esac
           arch="$(uname -m)"
+          if [[ "${arch}" != "arm64" && "${arch}" != "x86_64" ]]; then
+            echo "Unsupported arch: ${arch}" >&2
+            exit 1
+          fi
           name="ascctl-${version}-${os}-${arch}"
           dir="${name}"
           mkdir -p "${dir}"
           cp ".build/release/ascctl" "${dir}/ascctl"
           cp "README.md" "LICENSE" "CHANGELOG.md" "${dir}/"
           tar -czf "${name}.tar.gz" "${dir}"
-          shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256" || true
+          if command -v shasum >/dev/null 2>&1; then
+            shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256"
+          else
+            sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
+          fi
       - name: Upload To Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             ascctl-*.tar.gz
             ascctl-*.tar.gz.sha256
-

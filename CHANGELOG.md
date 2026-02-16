@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.1
+
+- Distribution: Homebrew tap (`Xopoko/tap`) + install/uninstall scripts.
+- Release artifacts: stable asset names + macOS (arm64 + x86_64) and Linux (x86_64).
+- Lower minimum supported macOS to 13.
+
 ## 0.1.0
 
 Initial public release.
@@ -12,4 +18,3 @@ Initial public release.
 - `openapi op template`: generates minimal `body` skeleton + runnable `argv`.
 - `openapi spec update`: supports Apple ZIP, raw OpenAPI JSON, and `file://...` sources.
 - `ids` helpers for fast ID lookups.
-
