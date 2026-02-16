@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-13, macos-14]
+        os: [ubuntu-22.04, macos-14]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -25,41 +25,69 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${RUNNER_OS}" == "Linux" ]]; then
-            swift build -c release --static-swift-stdlib
+            sudo apt-get update
+            sudo apt-get install -y libcurl4-openssl-dev
+            swift build -c release --static-swift-stdlib -Xlinker -lcurl
           else
-            swift build -c release
+            swift build -c release --triple arm64-apple-macosx13.0 --build-path .build-arm64
+            swift build -c release --triple x86_64-apple-macosx13.0 --build-path .build-x86_64
           fi
       - name: Smoke Test
         shell: bash
         run: |
           set -euo pipefail
-          .build/release/ascctl --help | python3 -c 'import sys, json; data = json.load(sys.stdin); assert data.get("ok") is True'
+          if [[ "${RUNNER_OS}" == "Linux" ]]; then
+            .build/release/ascctl --help | python3 -c 'import sys, json; data = json.load(sys.stdin); assert data.get("ok") is True'
+            exit 0
+          fi
+
+          native_arch="$(uname -m)"
+          case "${native_arch}" in
+            arm64) bin=".build-arm64/arm64-apple-macosx/release/ascctl" ;;
+            x86_64) bin=".build-x86_64/x86_64-apple-macosx/release/ascctl" ;;
+            *) echo "Unsupported macOS arch: ${native_arch}" >&2; exit 1 ;;
+          esac
+          "${bin}" --help | python3 -c 'import sys, json; data = json.load(sys.stdin); assert data.get("ok") is True'
       - name: Package
         shell: bash
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME}"
-          case "${RUNNER_OS}" in
-            macOS) os="macos" ;;
-            Linux) os="linux" ;;
-            *) echo "Unsupported runner OS: ${RUNNER_OS}" >&2; exit 1 ;;
-          esac
-          arch="$(uname -m)"
-          if [[ "${arch}" != "arm64" && "${arch}" != "x86_64" ]]; then
-            echo "Unsupported arch: ${arch}" >&2
-            exit 1
+          sha_file() {
+            local path="$1"
+            if command -v shasum >/dev/null 2>&1; then
+              shasum -a 256 "${path}" > "${path}.sha256"
+            else
+              sha256sum "${path}" > "${path}.sha256"
+            fi
+          }
+
+          package_one() {
+            local os="$1"
+            local arch="$2"
+            local bin="$3"
+            local name="ascctl-${version}-${os}-${arch}"
+            local dir="${name}"
+
+            mkdir -p "${dir}"
+            cp "${bin}" "${dir}/ascctl"
+            cp "README.md" "LICENSE" "CHANGELOG.md" "${dir}/"
+            tar -czf "${name}.tar.gz" "${dir}"
+            sha_file "${name}.tar.gz"
+          }
+
+          if [[ "${RUNNER_OS}" == "Linux" ]]; then
+            arch="$(uname -m)"
+            if [[ "${arch}" != "x86_64" ]]; then
+              echo "Unsupported linux arch: ${arch}" >&2
+              exit 1
+            fi
+            package_one "linux" "${arch}" ".build/release/ascctl"
+            exit 0
           fi
-          name="ascctl-${version}-${os}-${arch}"
-          dir="${name}"
-          mkdir -p "${dir}"
-          cp ".build/release/ascctl" "${dir}/ascctl"
-          cp "README.md" "LICENSE" "CHANGELOG.md" "${dir}/"
-          tar -czf "${name}.tar.gz" "${dir}"
-          if command -v shasum >/dev/null 2>&1; then
-            shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256"
-          else
-            sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
-          fi
+
+          package_one "macos" "arm64" ".build-arm64/arm64-apple-macosx/release/ascctl"
+          package_one "macos" "x86_64" ".build-x86_64/x86_64-apple-macosx/release/ascctl"
       - name: Upload To Release
         uses: softprops/action-gh-release@v2
         with:
