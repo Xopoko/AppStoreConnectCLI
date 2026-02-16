@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+      - run: swift build -c release
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME}"
+          os="${{ matrix.os }}"
+          arch="$(uname -m)"
+          name="ascctl-${version}-${os}-${arch}"
+          dir="${name}"
+          mkdir -p "${dir}"
+          cp ".build/release/ascctl" "${dir}/ascctl"
+          cp "README.md" "LICENSE" "CHANGELOG.md" "${dir}/"
+          tar -czf "${name}.tar.gz" "${dir}"
+          shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256" || true
+      - name: Upload To Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ascctl-*.tar.gz
+            ascctl-*.tar.gz.sha256
+
